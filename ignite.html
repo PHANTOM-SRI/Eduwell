@@ -1178,8 +1178,9 @@ function solveMath() {
   if (!expr) return;
   var resultEl = document.getElementById('mathResult');
   try {
-    var sanitized = expr.replace(/[^0-9+\-*/(). %]/g, '');
-    // Use indirect eval via Function to evaluate arithmetic safely
+    // Strict allowlist: only digits, basic operators, parens, decimal point
+    var sanitized = expr.replace(/[^0-9+\-*/().]/g, '');
+    if (!sanitized) throw new Error('Empty expression');
     var result = Function('"use strict"; return (' + sanitized + ')')();
     resultEl.textContent   = '= ' + result;
     resultEl.style.color   = 'var(--accent-color)';
