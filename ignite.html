@@ -1173,15 +1173,55 @@ function logSleep() {
 }
 
 // ── Math ───────────────────────────────────────────────────────────────────────
+function safeMathEval(expr) {
+  var tokens = expr.match(/\d+\.?\d*|[+\-*/()]/g);
+  if (!tokens) throw new Error('Invalid expression');
+  var pos = 0;
+  function parseExpr() {
+    var result = parseTerm();
+    while (pos < tokens.length && (tokens[pos] === '+' || tokens[pos] === '-')) {
+      var op = tokens[pos++];
+      var right = parseTerm();
+      result = op === '+' ? result + right : result - right;
+    }
+    return result;
+  }
+  function parseTerm() {
+    var result = parseFactor();
+    while (pos < tokens.length && (tokens[pos] === '*' || tokens[pos] === '/')) {
+      var op = tokens[pos++];
+      var right = parseFactor();
+      if (op === '/' && right === 0) throw new Error('Division by zero');
+      result = op === '*' ? result * right : result / right;
+    }
+    return result;
+  }
+  function parseFactor() {
+    if (tokens[pos] === '(') {
+      pos++;
+      var result = parseExpr();
+      if (tokens[pos] !== ')') throw new Error('Missing closing paren');
+      pos++;
+      return result;
+    }
+    if (tokens[pos] === '-') { pos++; return -parseFactor(); }
+    var num = parseFloat(tokens[pos++]);
+    if (isNaN(num)) throw new Error('Invalid number');
+    return num;
+  }
+  var result = parseExpr();
+  if (pos !== tokens.length) throw new Error('Invalid expression');
+  return result;
+}
+
 function solveMath() {
   var expr = document.getElementById('mathInput').value.trim();
   if (!expr) return;
   var resultEl = document.getElementById('mathResult');
   try {
-    // Strict allowlist: only digits, basic operators, parens, decimal point
     var sanitized = expr.replace(/[^0-9+\-*/().]/g, '');
     if (!sanitized) throw new Error('Empty expression');
-    var result = Function('"use strict"; return (' + sanitized + ')')();
+    var result = safeMathEval(sanitized);
     resultEl.textContent   = '= ' + result;
     resultEl.style.color   = 'var(--accent-color)';
     mathHistory.push({ expr: expr, result: result });
