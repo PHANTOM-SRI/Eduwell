@@ -67,6 +67,10 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: '
 .chat-message.user { text-align: right; }
 .chat-message.user .bubble { background: var(--gradient); display: inline-block; padding: 10px 15px; border-radius: 15px 15px 0 15px; max-width: 75%; }
 .chat-message.ai .bubble { background: rgba(255,255,255,0.08); display: inline-block; padding: 10px 15px; border-radius: 15px 15px 15px 0; max-width: 75%; }
+.chip-btn { background: rgba(102,126,234,0.15); border: 1px solid rgba(102,126,234,0.4); color: var(--text-primary); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.82rem; transition: background 0.2s; }
+.chip-btn:hover { background: rgba(102,126,234,0.35); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+#typingDots { animation: blink 1.2s step-start infinite; }
 .flashcard { width: 100%; max-width: 500px; height: 250px; margin: 0 auto 20px; perspective: 1000px; cursor: pointer; }
 .flashcard-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s; }
 .flashcard-inner.flipped { transform: rotateY(180deg); }
@@ -261,11 +265,27 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: '
     <h2 class="section-title">🤖 AI Tutor</h2>
     <div class="glass-card">
       <div class="chat-container" id="chatContainer">
-        <div class="chat-message ai"><div class="bubble">👋 Hello! I'm your AI Tutor. Ask me anything about your studies!</div></div>
+        <div class="chat-message ai"><div class="bubble">👋 Hello! I'm your AI Tutor. Ask me anything — math, science, history, coding, English, geography, economics, and more!</div></div>
       </div>
-      <div style="display:flex;gap:10px">
+      <div id="typingIndicator" style="display:none;padding:6px 0 2px 4px;color:var(--text-secondary);font-size:0.9rem;">
+        🤖 AI Tutor is typing<span id="typingDots">...</span>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
         <input type="text" id="chatInput" placeholder="Ask a question..." style="flex:1;padding:10px 15px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:10px;color:var(--text-primary);outline:none;" onkeydown="if(event.key==='Enter')sendChatMessage()">
         <button class="btn btn-primary" onclick="sendChatMessage()">Send 📤</button>
+      </div>
+      <div style="margin-top:12px;">
+        <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:8px;">💡 Try asking:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;" id="suggestionChips">
+          <button class="chip-btn" onclick="askSuggestion('Explain photosynthesis')">🌿 Photosynthesis</button>
+          <button class="chip-btn" onclick="askSuggestion('What is the Pythagorean theorem?')">📐 Pythagorean theorem</button>
+          <button class="chip-btn" onclick="askSuggestion('How does gravity work?')">🌍 Gravity</button>
+          <button class="chip-btn" onclick="askSuggestion('What caused World War 2?')">📜 WW2 causes</button>
+          <button class="chip-btn" onclick="askSuggestion('Explain DNA')">🧬 DNA</button>
+          <button class="chip-btn" onclick="askSuggestion('What is a variable in programming?')">💻 Programming basics</button>
+          <button class="chip-btn" onclick="askSuggestion('How do I improve my English writing?')">✍️ English writing</button>
+          <button class="chip-btn" onclick="askSuggestion('What is supply and demand?')">📈 Economics</button>
+        </div>
       </div>
     </div>
   </section>
@@ -1038,15 +1058,75 @@ function filterFlashcards(difficulty) {
 
 // ── AI Tutor ───────────────────────────────────────────────────────────────────
 var aiResponses = {
-  math:    "Great math question! Remember to break it down step by step. What specific operation are you working on?",
-  science: "Science is fascinating! Could you tell me more specifically which branch - physics, chemistry, or biology?",
-  history: "History is full of lessons. Which time period or event would you like to explore?",
-  default: "That's a great question! Let me help you think through it. Can you share more details about what you're studying?"
+  math:        "📐 Great math question! Break the problem into smaller steps. For arithmetic, check order of operations (PEMDAS/BODMAS). For algebra, isolate the variable. For geometry, recall your key formulas. What specific concept are you stuck on?",
+  calculus:    "∫ Calculus is about rates of change and accumulation. Differentiation finds the slope of a curve (dy/dx), while integration finds the area under it. Remember: the derivative of xⁿ is nxⁿ⁻¹. What topic — limits, derivatives, or integrals?",
+  geometry:    "📏 Geometry is the study of shapes and space. Key formulas: Area of circle = πr², Triangle area = ½bh, Pythagorean theorem: a²+b²=c². Are you working with 2D shapes or 3D solids?",
+  physics:     "⚛️ Physics explains how the universe works! Newton's laws: (1) Objects stay at rest unless acted upon. (2) F = ma. (3) Every action has an equal and opposite reaction. Are you studying mechanics, electricity, waves, or thermodynamics?",
+  chemistry:   "🧪 Chemistry is the science of matter and reactions. Remember the periodic table groups — metals on the left, non-metals on the right. Balancing equations? Ensure atom counts match on both sides. What topic — bonding, reactions, or organic chemistry?",
+  biology:     "🧬 Biology covers all living organisms. Key processes: photosynthesis (6CO₂+6H₂O→C₆H₁₂O₆+6O₂), cellular respiration (reverse), and DNA replication. Are you studying cells, genetics, evolution, or ecology?",
+  photosynthesis: "🌿 Photosynthesis is how plants make food using sunlight. The equation is: 6CO₂ + 6H₂O + light energy → C₆H₁₂O₆ (glucose) + 6O₂. It occurs in the chloroplasts — chlorophyll absorbs red and blue light. The two stages are the light-dependent reactions and the Calvin cycle (light-independent).",
+  dna:         "🧬 DNA (Deoxyribonucleic Acid) is the molecule carrying genetic instructions. It's a double helix made of nucleotides — Adenine pairs with Thymine, and Cytosine pairs with Guanine. Genes are segments of DNA that code for proteins. DNA replication is semi-conservative — each new strand keeps one original strand.",
+  gravity:     "🌍 Gravity is the force of attraction between objects with mass. Newton's law: F = Gm₁m₂/r². On Earth, g ≈ 9.8 m/s². Einstein's general relativity describes gravity as the curvature of spacetime caused by mass. Heavier objects warp spacetime more, creating the effect we feel as gravitational pull.",
+  pythagorean: "📐 The Pythagorean theorem states: in a right triangle, a² + b² = c², where c is the hypotenuse (longest side). Example: if a=3 and b=4, then c=√(9+16)=√25=5. This works only for right-angled triangles. It's used in distance calculations, architecture, and navigation.",
+  history:     "📜 History is full of lessons! Major eras: Ancient civilizations (3000 BCE), Classical (500 BCE), Medieval (500–1500 CE), Modern (1500–present). Which region or period — ancient India, Roman Empire, World Wars, or independence movements?",
+  ww2:         "📜 World War 2 (1939–1945) had several causes: (1) Rise of fascism in Germany under Hitler and Italy under Mussolini. (2) Failure of the Treaty of Versailles after WW1. (3) Economic hardship of the Great Depression. (4) Appeasement policy of Western powers. Germany invaded Poland on Sept 1, 1939, triggering declarations of war from UK and France.",
+  ww1:         "📜 World War 1 (1914–1918) was triggered by the assassination of Archduke Franz Ferdinand of Austria-Hungary. Major causes (MAIN): Militarism, Alliance systems, Imperialism, and Nationalism. The war involved the Allies (UK, France, Russia, USA) vs the Central Powers (Germany, Austria-Hungary, Ottoman Empire). It ended with the Treaty of Versailles in 1919.",
+  geography:   "🗺️ Geography studies Earth's landscapes, people, and environments. Physical geography covers landforms, climate, and ecosystems. Human geography covers population, culture, and economies. Which topic — continents, climate zones, rivers, or capitals?",
+  economics:   "📈 Economics studies how societies allocate scarce resources. Microeconomics looks at individuals and firms; macroeconomics looks at whole economies. Key concept — supply and demand: when supply rises or demand falls, prices drop; when demand rises or supply falls, prices increase.",
+  supplydemand:"📈 Supply and Demand is a foundational economics concept. The Law of Demand: as price increases, quantity demanded decreases (inverse relationship). The Law of Supply: as price increases, quantity supplied increases (direct relationship). The equilibrium price is where supply equals demand — no surplus or shortage.",
+  programming: "💻 Programming is giving instructions to computers. Key concepts: variables (store data), loops (repeat actions), conditionals (if/else), functions (reusable code blocks), and data structures (arrays, objects). Which language are you learning — Python, JavaScript, Java, or C++?",
+  python:      "🐍 Python is a beginner-friendly, versatile language. Key syntax: `print('Hello')`, `x = 5`, `if x > 3: print('yes')`, `for i in range(5): print(i)`. Indentation matters! Python is used for web development (Django/Flask), data science (pandas/numpy), and automation.",
+  javascript:  "🌐 JavaScript makes websites interactive. Key concepts: `let x = 5;`, `function greet(name){ return 'Hello '+name; }`, DOM manipulation (`document.getElementById('id').textContent = 'text'`), and events (`button.addEventListener('click', fn)`). JS runs in the browser and on servers (Node.js).",
+  english:     "✍️ To improve your English: (1) Read daily — books, articles, anything. (2) Write regularly — journaling builds fluency. (3) Learn 5 new vocabulary words per day. (4) Practice grammar — subject-verb agreement, tenses, punctuation. (5) Speak aloud to improve pronunciation. What area — grammar, vocabulary, writing, or speaking?",
+  writing:     "✍️ Strong writing has: a clear thesis, well-structured paragraphs (topic sentence → evidence → explanation), smooth transitions, and a compelling conclusion. Avoid passive voice where possible. Vary sentence length for rhythm. Proofread for spelling, grammar, and clarity. What type — essay, creative, or report writing?",
+  grammar:     "📝 Key grammar rules: (1) Subject and verb must agree — 'She runs' not 'She run'. (2) Use commas to separate clauses. (3) Its (possessive) vs It's (it is). (4) Their/There/They're are different words. (5) Active voice is usually clearer than passive. Which grammar point do you need help with?",
+  vocabulary:  "📚 Build vocabulary by: reading widely, using flashcards (spaced repetition works!), learning root words (Latin/Greek prefixes), and using new words in sentences. Example roots: 'bio' = life, 'geo' = earth, 'tele' = far, 'port' = carry. Context clues help decode unfamiliar words.",
+  environment: "🌱 Environmental science covers ecosystems, climate change, pollution, and sustainability. The greenhouse effect: CO₂ and methane trap heat, raising global temperatures. Solutions include renewable energy, reforestation, and reducing emissions. Key concept: biodiversity — the variety of life that keeps ecosystems resilient.",
+  climate:     "🌡️ Climate change is the long-term shift in global temperatures and weather patterns, primarily driven by burning fossil fuels since the Industrial Revolution. Effects: rising sea levels, extreme weather, melting ice caps. Mitigation strategies: solar/wind energy, electric vehicles, carbon capture, and international agreements like the Paris Accord.",
+  science:     "🔬 Science is the systematic study of the natural world through observation, experimentation, and evidence. The scientific method: (1) Observation, (2) Hypothesis, (3) Experiment, (4) Analysis, (5) Conclusion. Major branches: Physics (forces & energy), Chemistry (matter & reactions), Biology (living things), Earth Science, and Astronomy. Which branch interests you?",
+  default:     "🤔 That's an interesting question! I'm here to help with Math, Science (Physics, Chemistry, Biology), History, Geography, Economics, Programming, English, and more. Could you share more details about what you're studying? The more specific your question, the better I can help!"
 };
+
+function getAIResponse(msg) {
+  var lower = msg.toLowerCase();
+  if (lower.includes('pythagor') || lower.includes('a² + b²') || lower.includes('a^2 + b^2')) return aiResponses.pythagorean;
+  if (lower.includes('photosynthes')) return aiResponses.photosynthesis;
+  if (lower.includes('dna') || lower.includes('genetics') || lower.includes('chromosome')) return aiResponses.dna;
+  if (lower.includes('gravity') || lower.includes('gravitat')) return aiResponses.gravity;
+  if (lower.includes('supply') && lower.includes('demand')) return aiResponses.supplydemand;
+  if (lower.includes('world war 1') || lower.includes('ww1') || lower.includes('world war i') || lower.includes('first world war')) return aiResponses.ww1;
+  if (lower.includes('world war') || lower.includes('ww2') || lower.includes('world war 2') || lower.includes('world war ii') || lower.includes('second world war')) return aiResponses.ww2;
+  if (lower.includes('calculus') || lower.includes('derivative') || lower.includes('integral') || lower.includes('differentiat')) return aiResponses.calculus;
+  if (lower.includes('geometry') || lower.includes('triangle') || lower.includes('circle') || lower.includes('polygon')) return aiResponses.geometry;
+  if (lower.includes('python')) return aiResponses.python;
+  if (lower.includes('javascript')) return aiResponses.javascript;
+  if (lower.includes('program') || lower.includes('coding') || lower.includes('variable') || lower.includes('loop') || lower.includes('algorithm')) return aiResponses.programming;
+  if (lower.includes('climate') || lower.includes('global warming') || lower.includes('greenhouse')) return aiResponses.climate;
+  if (lower.includes('environment') || lower.includes('ecosystem') || lower.includes('biodiversity') || lower.includes('pollution')) return aiResponses.environment;
+  if (lower.includes('grammar') || lower.includes('tense') || lower.includes('punctuat')) return aiResponses.grammar;
+  if (lower.includes('vocabular') || lower.includes('synonym') || lower.includes('antonym')) return aiResponses.vocabulary;
+  if (lower.includes('writing') || lower.includes('essay') || lower.includes('paragraph') || lower.includes('thesis')) return aiResponses.writing;
+  if (lower.includes('english') || lower.includes('speaking') || lower.includes('pronunciation')) return aiResponses.english;
+  if (lower.includes('economics') || lower.includes('economy') || lower.includes('gdp') || lower.includes('inflation')) return aiResponses.economics;
+  if (lower.includes('geography') || lower.includes('continent') || lower.includes('capital city') || lower.includes('map of')) return aiResponses.geography;
+  if (lower.includes('history') || lower.includes('histor') || lower.includes('ancient') || lower.includes('civiliz')) return aiResponses.history;
+  if (lower.includes('physics') || lower.includes('force') || lower.includes('motion') || lower.includes('newton') || lower.includes('electric')) return aiResponses.physics;
+  if (lower.includes('chemistry') || lower.includes('element') || lower.includes('molecule') || lower.includes('periodic') || lower.includes('atom')) return aiResponses.chemistry;
+  if (lower.includes('biology') || lower.includes('cell') || lower.includes('organism') || lower.includes('evolution') || lower.includes('ecology')) return aiResponses.biology;
+  if (lower.includes('science') || lower.includes('scientif') || lower.includes('experiment') || lower.includes('hypothesis')) return aiResponses.science;
+  if (lower.includes('math') || lower.includes('calculator') || lower.includes('equation') || lower.includes('algebra') || lower.includes('fraction') || lower.includes('percent')) return aiResponses.math;
+  return aiResponses.default;
+}
+
+function askSuggestion(question) {
+  var input = document.getElementById('chatInput');
+  if (input) { input.value = question; sendChatMessage(); }
+}
 
 function sendChatMessage() {
   var input     = document.getElementById('chatInput');
   var container = document.getElementById('chatContainer');
+  var typing    = document.getElementById('typingIndicator');
   if (!input || !container) return;
   var msg = input.value.trim();
   if (!msg) return;
@@ -1056,23 +1136,21 @@ function sendChatMessage() {
   userDiv.innerHTML = '<div class="bubble">' + escapeHtml(msg) + '</div>';
   container.appendChild(userDiv);
   input.value = '';
+  container.scrollTop = container.scrollHeight;
+
+  if (typing) typing.style.display = 'block';
 
   setTimeout(function() {
-    var lower = msg.toLowerCase();
-    var response = aiResponses.default;
-    if (lower.includes('math') || lower.includes('calcul') || lower.includes('equation')) response = aiResponses.math;
-    else if (lower.includes('science') || lower.includes('physics') || lower.includes('chemistry') || lower.includes('biology')) response = aiResponses.science;
-    else if (lower.includes('history') || lower.includes('histor')) response = aiResponses.history;
+    if (typing) typing.style.display = 'none';
+    var response = getAIResponse(msg);
     var aiDiv = document.createElement('div');
     aiDiv.className = 'chat-message ai';
-    aiDiv.innerHTML = '<div class="bubble">🤖 ' + response + '</div>';
+    aiDiv.innerHTML = '<div class="bubble">' + response + '</div>';
     container.appendChild(aiDiv);
     container.scrollTop = container.scrollHeight;
     gainXP(2);
-  }, 600);
-
-  container.scrollTop = container.scrollHeight;
-  chatMessages.push(msg);
+    chatMessages.push(msg);
+  }, 800);
 }
 
 function escapeHtml(text) {
