@@ -86,6 +86,10 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: '
 .notes-toolbar button:hover { background: var(--accent-color); }
 #notesEditor { min-height: 200px; border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; outline: none; background: rgba(255,255,255,0.03); color: var(--text-primary); font-size: 1rem; }
 .footer { text-align: center; padding: 30px; color: var(--text-secondary); border-top: 1px solid var(--glass-border); margin-top: 40px; }
+.suggestion-chip { padding: 6px 14px; background: rgba(102,126,234,0.15); border: 1px solid rgba(102,126,234,0.4); border-radius: 20px; color: var(--text-primary); cursor: pointer; font-size: 0.85rem; transition: all 0.2s ease; }
+.suggestion-chip:hover { background: rgba(102,126,234,0.35); transform: translateY(-1px); }
+.personality-btn { padding: 8px 16px; background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); border-radius: 20px; color: var(--text-primary); cursor: pointer; transition: all 0.3s ease; font-size: 0.9rem; }
+.personality-btn:hover, .personality-btn.active { background: var(--accent-color); border-color: var(--accent-color); }
 .hamburger { display: none; position: fixed; top: 15px; left: 15px; z-index: 1100; background: var(--accent-color); border: none; color: white; font-size: 1.4rem; padding: 8px 12px; border-radius: 10px; cursor: pointer; }
 @media (max-width: 768px) {
   .hamburger { display: block; }
@@ -260,12 +264,26 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: '
   <section class="section" id="ai-tutor">
     <h2 class="section-title">🤖 AI Tutor</h2>
     <div class="glass-card">
+      <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
+        <button class="personality-btn active" id="pers-friendly" onclick="setPersonality('friendly')">😊 Friendly</button>
+        <button class="personality-btn" id="pers-professional" onclick="setPersonality('professional')">🎓 Professional</button>
+        <button class="personality-btn" id="pers-motivational" onclick="setPersonality('motivational')">💪 Motivational</button>
+      </div>
       <div class="chat-container" id="chatContainer">
         <div class="chat-message ai"><div class="bubble">👋 Hello! I'm your AI Tutor. Ask me anything about your studies!</div></div>
       </div>
       <div style="display:flex;gap:10px">
         <input type="text" id="chatInput" placeholder="Ask a question..." style="flex:1;padding:10px 15px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:10px;color:var(--text-primary);outline:none;" onkeydown="if(event.key==='Enter')sendChatMessage()">
         <button class="btn btn-primary" onclick="sendChatMessage()">Send 📤</button>
+        <button class="btn" style="background:rgba(255,80,80,0.3);border:1px solid rgba(255,80,80,0.5);color:var(--text-primary);cursor:pointer;border-radius:10px;padding:10px 14px;" onclick="clearChat()">🗑️</button>
+      </div>
+      <div id="chatSuggestions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">
+        <button class="suggestion-chip" onclick="fillChat('Explain quadratic equations')">📐 Quadratic equations</button>
+        <button class="suggestion-chip" onclick="fillChat('Give me a study tip')">💡 Study tip</button>
+        <button class="suggestion-chip" onclick="fillChat('Tell me a science joke')">😄 Science joke</button>
+        <button class="suggestion-chip" onclick="fillChat('Motivate me')">🔥 Motivate me</button>
+        <button class="suggestion-chip" onclick="fillChat('What is photosynthesis?')">🌿 Photosynthesis</button>
+        <button class="suggestion-chip" onclick="fillChat('Help')">❓ What can you do?</button>
       </div>
     </div>
   </section>
@@ -1037,12 +1055,151 @@ function filterFlashcards(difficulty) {
 }
 
 // ── AI Tutor ───────────────────────────────────────────────────────────────────
+var aiPersonality = 'friendly';
+
 var aiResponses = {
-  math:    "Great math question! Remember to break it down step by step. What specific operation are you working on?",
-  science: "Science is fascinating! Could you tell me more specifically which branch - physics, chemistry, or biology?",
-  history: "History is full of lessons. Which time period or event would you like to explore?",
-  default: "That's a great question! Let me help you think through it. Can you share more details about what you're studying?"
+  math: [
+    "Let's break this down step by step! 📐 For algebra: isolate the variable by performing the same operation on both sides. Example: 2x + 4 = 12 → 2x = 8 → x = 4. What specific problem are you working on?",
+    "Mathematics is the language of the universe! 🔢 Remember BODMAS/PEMDAS: Brackets, Orders, Division/Multiplication, Addition/Subtraction. Always solve in this order. Share your equation and I'll guide you!",
+    "Great math question! For percentages: multiply the number by the percentage and divide by 100. Example: 15% of 200 = (200 × 15) / 100 = 30. What are you calculating?"
+  ],
+  science: [
+    "Science is all about curiosity! 🔬 In physics, Newton's three laws govern motion: 1) Objects stay at rest or in motion unless acted upon. 2) F = ma. 3) Every action has an equal &amp; opposite reaction. Which topic?",
+    "Chemistry is fascinating! ⚗️ Remember the periodic table has 118 elements. The most abundant element in the universe is Hydrogen (H). In the human body, it's Oxygen. What are you studying?",
+    "Biology connects us to life itself! 🧬 Photosynthesis: 6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂. Mitosis vs Meiosis: mitosis creates identical cells, meiosis creates gametes with half chromosomes. Which area?"
+  ],
+  history: [
+    "History repeats itself! 📜 India's independence movement (1857-1947) was shaped by leaders like Gandhi, Nehru, and Bose. The non-cooperation and civil disobedience movements were key. What period interests you?",
+    "Ancient civilizations built the foundation of modern society! 🏛️ The Indus Valley Civilization (3300–1300 BCE) had advanced urban planning, writing systems, and trade networks. Which civilization?",
+    "World War II (1939-1945) reshaped the global order. Key events: D-Day (1944), atomic bombings of Hiroshima &amp; Nagasaki (1945), Holocaust. The UN was founded in 1945 to prevent future wars. More questions?"
+  ],
+  english: [
+    "English is all about expression! ✍️ For essay writing: start with a strong thesis, support with 3 body paragraphs, and end with a conclusion that restates your main idea. What are you working on?",
+    "Grammar tip: 📖 A sentence needs a subject and a predicate. Common mistakes: their/there/they're, your/you're, its/it's. Practice by reading aloud — your ear catches errors your eyes miss!",
+    "Vocabulary grows through context! 🔤 When you encounter a new word, note it down, find its etymology, use it in 3 sentences. Reading 20 minutes daily can add 1–2 million words to your vocabulary per year!"
+  ],
+  programming: [
+    "Coding is a superpower! 💻 In Python: variables don't need type declarations, indentation defines code blocks, and `print()` outputs text. Start with: `name = 'EduWell'; print(f'Hello, {name}!')`. What language?",
+    "JavaScript powers the web! 🌐 Key concepts: variables (let/const/var), functions, DOM manipulation, async/await. Example: `document.getElementById('id').textContent = 'Hello!'`. What are you building?",
+    "HTML structures the web, CSS styles it! 🎨 A basic HTML page needs `&lt;!DOCTYPE html&gt;`, `&lt;html&gt;`, `&lt;head&gt;`, and `&lt;body&gt;` tags. CSS selectors target elements: `.class`, `#id`, `element`. What are you learning?"
+  ],
+  health: [
+    "Health is wealth! 💪 For balanced nutrition: fill half your plate with vegetables &amp; fruits, quarter with lean proteins, quarter with whole grains. Drink 8 glasses of water daily. How can I help more?",
+    "Exercise is medicine! 🏃 The WHO recommends 150 mins of moderate activity per week. Even a 30-min daily walk reduces heart disease risk by 35%. What fitness goal are you working towards?",
+    "Sleep is crucial for learning! 😴 During REM sleep, your brain consolidates memories from the day. 7-9 hours is ideal for adults. Pro tip: avoid screens 1 hour before bed for better sleep quality!"
+  ],
+  meditation: [
+    "Meditation is a superpower for students! 🧘 Try box breathing: inhale 4 counts, hold 4, exhale 4, hold 4. Repeat 4 times. This activates the parasympathetic nervous system and reduces stress instantly!",
+    "Mindfulness is about being present! 🌿 Start with 5 minutes daily: sit comfortably, focus on your breath, gently return attention when your mind wanders. Studies show it improves focus and reduces anxiety by 30%.",
+    "Body scan meditation helps with stress relief! 🌊 Lie down, close your eyes, and slowly bring awareness from your toes to the top of your head, releasing tension in each part. Perfect before sleep or exams!"
+  ],
+  motivation: [
+    "\"The secret of getting ahead is getting started.\" — Mark Twain 🚀 Break your goal into tiny daily actions. 1% better every day = 37x better in a year! What goal are you working on?",
+    "You're capable of more than you know! 💪 Studies show that students who believe they can improve actually do improve (growth mindset). Every mistake is a lesson. Keep going — progress over perfection!",
+    "\"An investment in knowledge pays the best interest.\" — Benjamin Franklin 📚 Your future self will thank you for every hour you study today. What subject are you tackling?"
+  ],
+  geography: [
+    "Geography shapes civilizations! 🌍 The world has 7 continents and 5 oceans. The longest river is the Nile (6,650 km), tallest mountain is Everest (8,849 m). Which region are you studying?",
+    "Capital cities quiz! 🗺️ France → Paris, Japan → Tokyo, Brazil → Brasília, Australia → Canberra, India → New Delhi. Want me to quiz you on more capitals?",
+    "Rivers are the lifelines of civilizations! 🏞️ The Ganges, Amazon, Mississippi, Yangtze, and Danube are among the world's most important rivers. Each shaped unique cultures. Which geography topic?"
+  ],
+  economics: [
+    "Economics governs the world! 📊 Supply &amp; demand: when supply rises and demand stays constant, prices fall; when demand rises and supply stays constant, prices rise. What topic are you exploring?",
+    "GDP (Gross Domestic Product) measures a country's economic output! 💹 Inflation happens when the general price level rises, reducing purchasing power. The USA has the world's largest GDP. What interests you?",
+    "Markets are fascinating! 🏦 Stock markets, commodity markets, forex markets — all governed by supply and demand, investor confidence, and economic indicators. What economics concept do you need help with?"
+  ],
+  study_tips: [
+    "💡 Study Tip: Use the Pomodoro technique — 25 mins focused study, 5 min break. After 4 sessions, take a 30-min break. This beats burnout and improves retention by 40%!",
+    "💡 Study Tip: Active recall beats passive reading! Instead of re-reading, close the book and write down everything you remember. Then check. This is proven to double long-term retention!",
+    "💡 Study Tip: Spaced repetition is magic! Review material at increasing intervals: 1 day, 3 days, 1 week, 2 weeks. Use the Flashcards section in EduWell+ for this!"
+  ],
+  jokes: [
+    "Why did the biology book get a good grade? Because it had all the right cells! 😄",
+    "Why is the math book always stressed? Because it has too many problems! 📚😂",
+    "What do you call a fish without eyes? A fsh! 🐟 (Science joke: the 'i' represents iodine, which it's missing!)"
+  ],
+  help: [
+    "I'm your EduWell+ AI Tutor! 🤖 I can help with:\n📐 Math (algebra, geometry, calculus)\n🔬 Science (physics, chemistry, biology)\n📜 History &amp; Geography\n💻 Programming (Python, JS, HTML)\n💪 Health &amp; Fitness tips\n🧘 Meditation guidance\n🔥 Motivation &amp; study tips\n😄 Science jokes\nJust ask me anything!"
+  ],
+  greeting: [
+    "Hello there! 👋 I'm your EduWell+ AI Tutor, ready to help you learn and grow! What subject would you like to explore today?",
+    "Hey! 😊 Great to see you here! Whether it's math, science, history, or just a motivation boost — I've got you! What's on your mind?",
+    "Hi! 🎓 Welcome to your personalized learning session! I'm here to make studying easier and more fun. What would you like to learn?"
+  ],
+  farewell: [
+    "Goodbye! 👋 Keep studying hard and remember — every minute you invest in learning compounds over time. See you soon!",
+    "Bye! 😊 You're doing great! Come back whenever you need help. Keep up the amazing work!",
+    "See you later! 🎓 Remember: consistency beats intensity. Even 30 minutes a day adds up to over 180 hours a year. Farewell!"
+  ],
+  thanks: [
+    "You're very welcome! 😊 I'm here anytime you need help. Keep up the great work!",
+    "Happy to help! 🌟 Learning is a journey — keep going!",
+    "Anytime! 💪 That's what I'm here for. What else would you like to explore?"
+  ],
+  quiz: [
+    "Quiz time! 🧠 Here's your question: What is the powerhouse of the cell? (Hint: it starts with 'M')",
+    "Quiz time! 🧠 What is 15% of 200? Type your answer!",
+    "Quiz time! 🧠 Who wrote the theory of relativity? (Hint: famous physicist with wild hair!)",
+    "Quiz time! 🧠 What is the capital of Australia? (Hint: it's not Sydney!)",
+    "Quiz time! 🧠 In Python, which keyword is used to define a function?"
+  ],
+  default: [
+    "That's a great question! 🤔 Let me help you think through it. Could you share more details about what you're studying? I can help with math, science, history, programming, health, and much more!",
+    "Interesting! 💡 I'd love to dive deeper into that topic. Try asking about a specific subject like math, science, history, English, programming, health, or geography!",
+    "Great question! 📚 I'm here to help. You can ask me about any subject, request a study tip, get motivated, or even hear a joke. What would you like to explore?"
+  ]
 };
+
+function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function setPersonality(p) {
+  aiPersonality = p;
+  ['friendly','professional','motivational'].forEach(function(id) {
+    var btn = document.getElementById('pers-' + id);
+    if (btn) btn.classList.toggle('active', id === p);
+  });
+}
+
+function fillChat(text) {
+  var el = document.getElementById('chatInput');
+  if (el) { el.value = text; el.focus(); }
+}
+
+function clearChat() {
+  var container = document.getElementById('chatContainer');
+  if (container) {
+    container.innerHTML = '<div class="chat-message ai"><div class="bubble">👋 Hello! I\'m your AI Tutor. Ask me anything about your studies!</div></div>';
+    localStorage.removeItem('eduwell_chat');
+  }
+}
+
+function getAIResponse(msg) {
+  var lower = msg.toLowerCase();
+  if (lower.match(/\b(hi|hello|hey)\b/)) return rand(aiResponses.greeting);
+  if (lower.match(/\b(bye|goodbye)\b/)) return rand(aiResponses.farewell);
+  if (lower.match(/\bthank/)) return rand(aiResponses.thanks);
+  if (lower.includes('joke')) return rand(aiResponses.jokes);
+  if (lower.includes('quiz') || lower.includes('test me')) return rand(aiResponses.quiz);
+  if (lower.includes('help') || lower.includes('what can you do')) return rand(aiResponses.help);
+  if (lower.includes('tip') || lower.includes('study tip')) return rand(aiResponses.study_tips);
+  if (lower.includes('motivat') || lower.includes('inspir')) return rand(aiResponses.motivation);
+  if (lower.match(/\b(math|calcul|equation|algebra|geometry|trigonometry|statistic|fraction|percent)/)) return rand(aiResponses.math);
+  if (lower.match(/\b(science|physics|chemistry|biology|astronom|earth science|photosynthesis)/)) return rand(aiResponses.science);
+  if (lower.match(/\b(history|histor|civilization|ancient|war|independence)/)) return rand(aiResponses.history);
+  if (lower.match(/\b(english|grammar|vocabular|essay|poetry|comprehension)/)) return rand(aiResponses.english);
+  if (lower.match(/\b(program|python|javascript|html|css|algorithm|data structure|coding)/)) return rand(aiResponses.programming);
+  if (lower.match(/\b(health|nutrition|exercise|sleep|mental health|bmi|hydration|fitness|diet)/)) return rand(aiResponses.health);
+  if (lower.match(/\b(meditat|breath|mindful|stress relief)/)) return rand(aiResponses.meditation);
+  if (lower.match(/\b(geograph|capital|continent|river|mountain|countr)/)) return rand(aiResponses.geography);
+  if (lower.match(/\b(econom|supply|demand|gdp|inflation|market)/)) return rand(aiResponses.economics);
+  return rand(aiResponses.default);
+}
+
+function applyPersonality(response) {
+  if (aiPersonality === 'professional') return 'Based on your query: ' + response;
+  if (aiPersonality === 'motivational') return "You've got this! 💪 " + response;
+  return 'Hey! 😊 ' + response;
+}
 
 function sendChatMessage() {
   var input     = document.getElementById('chatInput');
@@ -1056,22 +1213,28 @@ function sendChatMessage() {
   userDiv.innerHTML = '<div class="bubble">' + escapeHtml(msg) + '</div>';
   container.appendChild(userDiv);
   input.value = '';
+  container.scrollTop = container.scrollHeight;
+
+  var typingDiv = document.createElement('div');
+  typingDiv.className = 'chat-message ai';
+  typingDiv.id = 'typingIndicator';
+  typingDiv.innerHTML = '<div class="bubble" style="letter-spacing:3px">• • •</div>';
+  container.appendChild(typingDiv);
+  container.scrollTop = container.scrollHeight;
 
   setTimeout(function() {
-    var lower = msg.toLowerCase();
-    var response = aiResponses.default;
-    if (lower.includes('math') || lower.includes('calcul') || lower.includes('equation')) response = aiResponses.math;
-    else if (lower.includes('science') || lower.includes('physics') || lower.includes('chemistry') || lower.includes('biology')) response = aiResponses.science;
-    else if (lower.includes('history') || lower.includes('histor')) response = aiResponses.history;
+    var typing = document.getElementById('typingIndicator');
+    if (typing) typing.parentNode.removeChild(typing);
+    var response = applyPersonality(getAIResponse(msg));
     var aiDiv = document.createElement('div');
     aiDiv.className = 'chat-message ai';
     aiDiv.innerHTML = '<div class="bubble">🤖 ' + response + '</div>';
     container.appendChild(aiDiv);
     container.scrollTop = container.scrollHeight;
+    localStorage.setItem('eduwell_chat', container.innerHTML);
     gainXP(2);
   }, 600);
 
-  container.scrollTop = container.scrollHeight;
   chatMessages.push(msg);
 }
 
@@ -1379,6 +1542,11 @@ document.addEventListener('DOMContentLoaded', function() {
   if (savedNotes) {
     var notesEl = document.getElementById('notesEditor');
     if (notesEl) notesEl.innerHTML = savedNotes;
+  }
+  var savedChat = localStorage.getItem('eduwell_chat');
+  if (savedChat) {
+    var chatEl = document.getElementById('chatContainer');
+    if (chatEl) chatEl.innerHTML = savedChat;
   }
   updateFlashcard();
 });
